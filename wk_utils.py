@@ -169,7 +169,7 @@ def run_tleap(ligand_name, lig_resname, lig_charge, padding, total_steps):
         # First antechamber command
         process1 = subprocess.run(f"antechamber -i {ligand_name}_ob.pdb -fi pdb -o {ligand_name}.pdb "
                                   f"-fo pdb -ek 'maxcyc=0'",
-                                  shell=True, stdout=log, stderr=log)
+                                  shell=True, stdout=log, stderr=log, cwd=os.getcwd())
         
         if process1.returncode != 0:
             log_to_file("Error in first antechamber command")
@@ -178,7 +178,7 @@ def run_tleap(ligand_name, lig_resname, lig_charge, padding, total_steps):
         # Second antechamber command
         process2 = subprocess.run(f"antechamber -i {ligand_name}.pdb -fi pdb -o {ligand_name}.mol2 "
                                   f"-fo mol2 -c bcc -nc {lig_charge} -m 1 -at gaff2",
-                                  shell=True, stdout=log, stderr=log)
+                                  shell=True, stdout=log, stderr=log, cwd=os.getcwd())
         
         if process2.returncode != 0:
             log_to_file("Error in second antechamber command")
@@ -198,7 +198,7 @@ def run_tleap(ligand_name, lig_resname, lig_charge, padding, total_steps):
     print("\033[1m\033[34mRunning parmchk2 to generate FRCMOD file\033[0m")
     with open(log_file, 'a') as log:
         subprocess.run(f"parmchk2 -i {ligand_name}.mol2 -f mol2 -o {ligand_name}.frcmod",
-                       shell=True, stdout=log, stderr=log)
+                       shell=True, stdout=log, stderr=log, cwd=os.getcwd())
     log_to_file("parmchk2 completed successfully.")
     
     # Ensure error check function is properly defined
@@ -220,7 +220,7 @@ def run_tleap(ligand_name, lig_resname, lig_charge, padding, total_steps):
         tleap_file.close()
 
     with open(log_file, 'a') as log:
-        subprocess.run(f"tleap -f {tleap_file.name} > logs/2_logs_tleap_pre_waterkit", shell=True, stdout=log, stderr=log)
+        subprocess.run(f"tleap -f {tleap_file.name} > logs/2_logs_tleap_pre_waterkit", shell=True, stdout=log, stderr=log, cwd=os.getcwd())
     os.remove(tleap_file.name)
 
     if check_error(f"{ligand_name}.frcmod", log_file) or check_error(f"{ligand_name}.lib", log_file) or check_error(f"{ligand_name}.mol2", log_file) or check_error(f"{ligand_name}_box.pdb", log_file):
@@ -300,12 +300,12 @@ def prepare_receptor_and_create_grid_protein(SX, SY, SZ, input_pdb, output_pdb, 
     with open(log_file, 'a') as log:
         subprocess.run(f"wk_prepare_receptor.py -i {pdb_file} --lib {ligand_name}.lib --frcmod {ligand_name}.frcmod \
                          -o prot_prep --ignore_gaps --pdb --amber_pdbqt",
-                         shell=True, stdout=log, stderr=log)
+                         shell=True, stdout=log, stderr=log, cwd=os.getcwd())
         
         subprocess.run(f"/root/../miniconda/envs/waterkit/bin/wk_create_grid_protein_file.py \
                          -r prot_prep_amber.pdbqt -l {ligand_name}.pdb \
                          -s {SX} {SY} {SZ} -w \"{water_model}\" -o prot_lig.gpf", 
-                         shell=True, stdout=log, stderr=log)
+                         shell=True, stdout=log, stderr=log, cwd=os.getcwd())
 
         log_to_file(f"Box Dimensions: {SX}, {SY}, {SZ}")
         log_to_file(f"Receptor and grid preparation completed successfully.")
@@ -315,7 +315,7 @@ def prepare_receptor_and_create_grid_protein(SX, SY, SZ, input_pdb, output_pdb, 
 def check_for_errors(log_file):
     """Check the log file for errors."""
     error_keywords = ["Traceback", "KeyError", "ValueError", "Cannot find", "Error"]
-    with open(log_file, 'r') as log:
+    with open(log_file, 'r', encoding='utf-8') as log:
         log_content = log.read()
         return any(keyword in log_content for keyword in error_keywords)
 
@@ -334,7 +334,7 @@ def run_waterkit(X, Y, Z, SX, SY, SZ, n_cores, total_steps):
     
     process = subprocess.Popen(f'run_waterkit.py -i prot_prep_amber.pdbqt \
                                  -c {X} {Y} {Z} -s {SX} {SY} {SZ} -n {total_steps} -j {n_cores} -o traj',
-                                 shell=True, stdout=open(log_file, 'a'), stderr=open(log_file, 'a'))
+                                 shell=True, stdout=open(log_file, 'a'), stderr=open(log_file, 'a'), cwd=os.getcwd())
     
     while process.poll() is None:
         num_files = len([name for name in os.listdir('traj') if os.path.isfile(os.path.join('traj', name))])
@@ -353,7 +353,7 @@ def run_waterkit(X, Y, Z, SX, SY, SZ, n_cores, total_steps):
     
     process = subprocess.Popen('/root/../miniconda/envs/waterkit/bin/wk_make_trajectory.py \
                                -r prot_prep.pdb -w traj -o prot_lig_out --lib ligand_wH.lib --frcmod ligand_wH.frcmod',
-                               shell=True, stdout=open(log_file, 'a'), stderr=open(log_file, 'a'))
+                               shell=True, stdout=open(log_file, 'a'), stderr=open(log_file, 'a'), cwd=os.getcwd())
     
     while process.poll() is None:
         time.sleep(1)
@@ -369,7 +369,7 @@ def run_waterkit(X, Y, Z, SX, SY, SZ, n_cores, total_steps):
     
     process = subprocess.Popen(f'wk_minimize_trajectory.py -p prot_lig_out_system.prmtop \
                                  -t prot_lig_out_system.nc -o prot_lig_out_system_min.nc',
-                                 shell=True, stdout=open(log_file, 'a'), stderr=open(log_file, 'a'))
+                                 shell=True, stdout=open(log_file, 'a'), stderr=open(log_file, 'a'), cwd=os.getcwd())
     
     while process.poll() is None:
         time.sleep(0.25)
@@ -403,8 +403,9 @@ quit
     
         with open('gist.inp', 'w') as gist_file:
             gist_file.write(gist_input_content)
+        print(f"Creating gist.inp at: gist.inp")
     
-        process = subprocess.Popen("cpptraj -i gist.inp", shell=True, stdout=log, stderr=log)
+        process = subprocess.Popen("cpptraj -i gist.inp", shell=True, stdout=log, stderr=log, cwd=os.getcwd())
         time.sleep(2)
 
         log_to_file(f"GIST analysis completed successfully")
@@ -643,7 +644,7 @@ def generate_water_site_pdb(wat_sites, input_pdb):
         with open(f"wat_site_{wat_site}.pdb", "w") as output_file:
             output_file.writelines(lines)
 
-def create_summary_file(log_file_path, output_file_path='../wat_FE_summary.dat'):
+def create_summary_file(log_file_path, output_file_path='wat_FE_summary.dat'):
     """
     Reads a gistpp.log file, extracts free energy values for water residues,
     and writes them to a wat_FE_summary.dat file.
@@ -693,6 +694,7 @@ def create_summary_file(log_file_path, output_file_path='../wat_FE_summary.dat')
                 file.write(f"{site:<10}  {free_energy:>20.6f}  {tds:>16.6f}  {etot:>17.6f}\n")
                     
         print(f"Summary file created successfully at: {output_file_path}")
+        print(f"Creating summary file at: {output_file_path}")
         print(f"Processed {len(data)} water sites")
         
     except FileNotFoundError:
@@ -819,10 +821,13 @@ def hydra_sites(gist_res):
             time.sleep(update_interval)
     
         hs.export_to_pdb("water_sites_dG_smoothed.pdb", hydration_sites, dg_energy)
+        print(f"Creating water_sites_dG_smoothed.pdb at: water_sites_dG_smoothed.pdb")
         dg_energy_df = pd.DataFrame(dg_energy, columns=["Free Energy (~TG)"])
         dg_energy_df.to_csv("water_sites_dG_energy.txt", index=False, header=False, float_format="%.3f")
+        print(f"Creating water_sites_dG_energy.txt at: water_sites_dG_energy.txt")
         map_smooth = blur_map(dg, radius=1.4)
         map_smooth.export("gist_dG_dens_smoothed.dx")
+        print(f"Creating gist_dG_dens_smoothed.dx at: gist_dG_dens_smoothed.dx")
         
         print("\r100% | " + "#" * 100)
         log_to_file(f"Identification of hydration sites completed.")
@@ -847,6 +852,7 @@ def process_wk_pdb():
         file.writelines(modified_lines)
         file.write('END\n')
 
+    print(f"Creating prot_lig_out_system_wk.pdb at: {output_pdb}")
     print(f"\033[1m\033[34mprot_lig_out_system.pdb and water_sites_dG_smoothed.pdb files are merged and saved as:\033[0m \033[1m\033[34m\033[92m{output_pdb}\033[0m")
 
 
@@ -881,6 +887,7 @@ def add_hydrogens():
         file.writelines(modified_lines)
         file.write('END\n')
 
+    print(f"Creating prot_lig_wat_modH.pdb at: {output_pdb}")
     print(f"\033[1m\033[34mFinal pdb file is saved as:\033[0m \033[1m\033[34m\033[92m{output_pdb}\033[0m")
 
 def tleap_post_wkit_comp(lig_resname, water_model):
@@ -900,7 +907,7 @@ def tleap_post_wkit_comp(lig_resname, water_model):
         tleap_file.write(tleap_commands.encode('utf-8'))
         tleap_file.close()  
     
-    subprocess.run(f"tleap -f {tleap_file.name} > logs/7_logs_tleap_post_waterkit", shell=True)
+    subprocess.run(f"tleap -f {tleap_file.name} > logs/7_logs_tleap_post_waterkit", shell=True, cwd=os.getcwd())
     os.remove(tleap_file.name)
 
 def openmm_min():
@@ -983,10 +990,10 @@ def process_pdb_and_run_tleap(input_pdb, prot_chain_id=None, lig_chain_id=None, 
     tleap_post_wkit_comp(lig_resname, water_model)
     openmm_min()
 
-    for pattern in ["ANTECHAMBER*", "sqm*", "*.inpcrd", "*.log", "*.prmtop", "*.INF", "gist-dTSsix-dens.dx", 
-                    "gist-dipole*", "gist-gH.dx", "*norm.dx", "gist-output.dat", "gist_dG_dens_smoothed.dx"]:
-        for file_path in glob.glob(pattern):
-            os.remove(file_path)
+    # for pattern in ["ANTECHAMBER*", "sqm*", "*.inpcrd", "*.log", "*.prmtop", "*.INF", "gist-dTSsix-dens.dx", 
+    #                 "gist-dipole*", "gist-gH.dx", "*norm.dx", "gist-output.dat", "gist_dG_dens_smoothed.dx"]:
+    #     for file_path in glob.glob(pattern):
+    #         os.remove(file_path)
     
     end_time = time.time()  
     total_time = (end_time - start_time) / 60 

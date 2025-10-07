@@ -2,4 +2,5 @@
 source /miniconda/etc/profile.d/conda.sh
 conda activate waterkit
 
-python -u main.py
+# Keep the container running in the foreground
+tail -f /dev/null

@@ -25,3 +25,25 @@ stop-container:
 		docker rm -f $(JP_CONTAINER) > /dev/null 2>&1; \
 	else echo "\033[1;31mThere are no running containers to stop.\033[0m"; \
 	fi
+
+build-api-image:
+	@cd devops && \
+		JP_IMAGE=$(JP_IMAGE) JP_CONTAINER=$(JP_CONTAINER) JP_PORT=$(JP_PORT) \
+		docker compose build api
+
+start-api-container:
+	@docker ps --format '{{.Names}}' | grep -q "^waterkit-api$$" && echo "Already running container: \e[1;32mwaterkit-api\e[0m" || true
+
+	@if ! docker ps --format '{{.Names}}' | grep -q -e "^waterkit-api$$"; then \
+		cd devops && \
+			JP_IMAGE=$(JP_IMAGE) JP_CONTAINER=$(JP_CONTAINER) JP_PORT=$(JP_PORT) \
+			docker compose -p $(SERVICE_NAME) up -d api && \
+		echo "Successfully started API container: \e[1;32mwaterkit-api\e[0m"; \
+	fi
+
+stop-api-container:
+	@if docker ps -a --format '{{.Names}}' | grep -q -e "^waterkit-api$$"; then \
+		echo "Stopped and removed API container: \033[1;31mwaterkit-api\033[0m"; \
+		docker rm -f waterkit-api > /dev/null 2>&1; \
+	else echo "\033[1;31mThere is no API container to stop.\033[0m"; \
+	fi
