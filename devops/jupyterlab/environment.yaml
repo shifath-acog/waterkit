@@ -1,0 +1,34 @@
+name: waterkit
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.8.10
+  - cudatoolkit=11.8
+  - numpy
+  - scipy
+  - pandas
+  - openbabel
+  - parmed
+  - ambertools
+  - openmm
+  - openmmforcefields
+  - openff-toolkit
+  - pdbfixer
+  - netcdf4
+  - griddataformats
+  - tqdm
+  - mkl
+  - sphinx
+  - sphinx_rtd_theme
+  - rdkit
+  - autodock
+  - pip
+  - pip:
+      - jupyterlab
+      - ipywidgets
+      - ipython-sql
+      - vina
+      - biopython
+      - inotify

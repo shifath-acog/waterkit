@@ -1,0 +1,16 @@
+pdb_file: "/home/waterkit/WATERKIT/5ezx_sample_32.pdb"
+# pdb_id: "1MWE"
+prot_chain_id: "A"
+lig_chain_id: "B"
+lig_resid: 1
+lig_resname: "UNL"
+lig_charge: 0
+output_folder: "shifath-test"
+wat_chain_id: "A" 
+wat_sel_dist: 5
+# wat_sites: [A1326,A1327]
+wat_model: "tip3p"
+wk_frames: 100
+padding: 6.0
+n_cores: 16
+gist_res: 0.5

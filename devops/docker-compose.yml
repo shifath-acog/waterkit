@@ -1,0 +1,32 @@
+services:
+  waterkit:
+    build:
+      context: ./jupyterlab
+      dockerfile: Dockerfile
+    image: ${JP_IMAGE}
+    container_name: ${JP_CONTAINER}
+    ports:
+      - "${JP_PORT}:7777"
+    environment:  # Add CUDA environment variables
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    volumes:
+      - "../:/home/waterkit/WATERKIT"
+      - "/mnt/own6a/toran/wkit/IFD-MD/waterkit/gist-post-processing:/gist-post-processing"
+    labels:
+      - "description=WaterKit Container"
+      - "port=7777"
+    networks:
+      - waterkit
+
+networks:
+  waterkit:
+    driver: bridge
