@@ -12,7 +12,9 @@ from rdkit import Chem
 
 def check_hydrogens_pdb(pdb_file: str):
     # Load ligand from PDB with explicit hydrogens kept
+    print(f"Attempting to parse PDB file: {pdb_file} in CWD: {os.getcwd()}")
     mol = Chem.MolFromPDBFile(pdb_file, removeHs=False)
+    print(f"MolFromPDBFile result for {pdb_file}: {mol}")
     if mol is None:
         raise ValueError(f"Could not parse {pdb_file}")
 
@@ -329,8 +331,9 @@ def add_charge_line_to_sdf(input_file: str, output_file: str) -> None:
             
 def run_command(command, log_file_path):
     """Run a shell command, print its output, and write it to a log file."""
+    print(f"Executing command in CWD: {os.getcwd()}")
     try:
-        result = subprocess.run(command, shell=True, check=True, text=True, capture_output=True)
+        result = subprocess.run(command, shell=True, check=True, text=True, capture_output=True, cwd=os.getcwd())
         print(result.stdout)
         
         with open(log_file_path, 'a') as log_file:
@@ -469,9 +472,11 @@ def export_protein_ligand_from_file(pdb_input, prot_chain_id, lig_chain_id, lig_
 
     # === Extract ligand ===
     ligand_pdb = f"lig_{lig_chain_id}_{lig_resid}_{lig_resname}.pdb"
+    print(f"Saving ligand to: {ligand_pdb} in CWD: {os.getcwd()}")
     io_ligand = PDBIO()
     io_ligand.set_structure(structure)
     io_ligand.save(ligand_pdb, LigandSelect(lig_chain_id, lig_resid, lig_resname))
+    print(f"Ligand file {ligand_pdb} exists: {os.path.exists(ligand_pdb)}")
 
     # === Add hydrogens and write SDF ===
     h_addition = check_hydrogens_pdb(ligand_pdb)
