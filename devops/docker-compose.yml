@@ -7,7 +7,7 @@ services:
     container_name: ${JP_CONTAINER}
     ports:
       - "${JP_PORT}:7777"
-    environment:  # Add CUDA environment variables
+    environment:  
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
       - LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
@@ -20,22 +20,19 @@ services:
               capabilities: [gpu]
     volumes:
       - "../:/home/waterkit/WATERKIT"
-      - "/mnt/own6a/toran/wkit/IFD-MD/waterkit/gist-post-processing:/gist-post-processing"
     labels:
       - "description=WaterKit Container"
       - "port=7777"
     networks:
       - waterkit
 
-  # API service, accessible only from within the Docker network (e.g., by the reverse proxy)
   api:
     build:
       context: ../api
       dockerfile: Dockerfile
     container_name: waterkit-api
     restart: unless-stopped
-    # PORTS REMOVED - A reverse proxy will manage access.
-    entrypoint: "" # Override the base image's entrypoint
+    entrypoint: ""
     command: uvicorn api.main:app --host 0.0.0.0 --port 8000
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
@@ -56,5 +53,4 @@ services:
 networks:
   waterkit:
     driver: bridge
-    # Note: Your reverse proxy's container must also be attached to this 'waterkit' network
-    # for it to be able to route traffic to the 'api' service.
+   

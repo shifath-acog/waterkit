@@ -9,6 +9,7 @@ from datetime import datetime
 from typing import Optional, List
 
 from fastapi import FastAPI, HTTPException, File, UploadFile
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 # --- Configuration ---
@@ -150,3 +151,105 @@ def create_task(settings: PipelineSettings):
     subprocess.Popen(command, env=env)
 
     return {"task_id": task_id, "message": "Task successfully queued."}
+
+@app.get("/api/tasks/{task_id}/status")
+def get_task_status(task_id: str):
+    """
+    Retrieves the current status of a specific task.
+    """
+    try:
+        with open(STATUS_FILE, "r") as f:
+            fcntl.flock(f, fcntl.LOCK_SH) # Use shared lock for reading
+            try:
+                data = json.load(f)
+            except json.JSONDecodeError:
+                data = {} # If file is empty or malformed, treat as empty dict
+            fcntl.flock(f, fcntl.LOCK_UN)
+
+        task_info = data.get(task_id)
+        if not task_info:
+            raise HTTPException(status_code=404, detail=f"Task with ID {task_id} not found.")
+        
+        return task_info
+
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Task status file not found.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to read task status: {e}")
+
+@app.get("/api/tasks/{task_id}/results")
+def get_task_results(task_id: str):
+    """
+    Retrieves a list of output files for a completed task.
+    """
+    try:
+        with open(STATUS_FILE, "r") as f:
+            fcntl.flock(f, fcntl.LOCK_SH) # Use shared lock for reading
+            try:
+                data = json.load(f)
+            except json.JSONDecodeError:
+                data = {}
+            fcntl.flock(f, fcntl.LOCK_UN)
+
+        task_info = data.get(task_id)
+        if not task_info:
+            raise HTTPException(status_code=404, detail=f"Task with ID {task_id} not found.")
+        
+        if task_info["status"] != "COMPLETED":
+            raise HTTPException(status_code=409, detail=f"Task {task_id} is not completed yet. Current status: {task_info['status']}.")
+
+        task_dir = Path(task_info["task_dir"])
+        if not task_dir.is_dir():
+            raise HTTPException(status_code=404, detail=f"Output directory for task {task_id} not found.")
+
+        # List files in the task directory, excluding specific internal files
+        excluded_files = ["setting.yml", "gistpp.sh", "logs"]
+        result_files = []
+        for item in task_dir.iterdir():
+            if item.name not in excluded_files and item.is_file():
+                result_files.append(item.name)
+            elif item.name not in excluded_files and item.is_dir():
+                # Optionally, list contents of subdirectories or just include directory name
+                result_files.append(item.name + "/") # Indicate it's a directory
+
+        return {"task_id": task_id, "status": task_info["status"], "results": sorted(result_files)}
+
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Task status file not found.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve task results: {e}")
+
+@app.get("/api/tasks/{task_id}/files/{filename}")
+def get_task_file(task_id: str, filename: str):
+    """
+    Retrieves the content of a specific output file for a completed task.
+    """
+    try:
+        with open(STATUS_FILE, "r") as f:
+            fcntl.flock(f, fcntl.LOCK_SH) # Use shared lock for reading
+            try:
+                data = json.load(f)
+            except json.JSONDecodeError:
+                data = {}
+            fcntl.flock(f, fcntl.LOCK_UN)
+
+        task_info = data.get(task_id)
+        if not task_info:
+            raise HTTPException(status_code=404, detail=f"Task with ID {task_id} not found.")
+
+        if task_info["status"] != "COMPLETED":
+            raise HTTPException(status_code=409, detail=f"Task {task_id} is not completed yet. Current status: {task_info['status']}.")
+
+        task_dir = Path(task_info["task_dir"])
+        file_path = task_dir / filename
+
+        # Ensure the file exists and is within the task directory
+        if not file_path.is_file() or not file_path.is_relative_to(task_dir):
+            raise HTTPException(status_code=404, detail=f"File {filename} not found for task {task_id}.")
+
+        return FileResponse(file_path, media_type="application/octet-stream", filename=filename)
+
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Task status file not found.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve file content: {e}")
